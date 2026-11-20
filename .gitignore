@@ -1,0 +1,17 @@
+# Telegram Local Sessions & User Data (Do NOT commit private sessions)
+sessions/
+data/
+uploads/
+
+# Python cache & test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.hypothesis/
+.venv/
+venv/
+
+# Node & Capacitor build folders
+node_modules/
+apk_www/
+android/

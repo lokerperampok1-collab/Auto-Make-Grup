@@ -1,0 +1,9 @@
+{
+  "appId": "com.automakegrup.clay.app",
+  "appName": "Auto Make Grup Clay",
+  "webDir": "apk_www",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}

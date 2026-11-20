@@ -1,0 +1,16 @@
+{
+  "name": "auto-make-grup-claymorphism-apk",
+  "version": "1.1.0",
+  "description": "Standalone Android APK (Claymorphism Theme) for Telegram Auto-Make-Grup & Chat History Cleaner",
+  "private": true,
+  "scripts": {
+    "prepare:www": "python scripts/prepare_apk_www.py",
+    "apk:init": "npx cap add android",
+    "apk:sync": "python scripts/prepare_apk_www.py && npx cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/cli": "^6.1.2",
+    "@capacitor/core": "^6.1.2"
+  }
+}

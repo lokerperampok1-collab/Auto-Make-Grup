@@ -1,0 +1,18 @@
+{
+  "name": "Telegram Auto-Make-Grup Clay",
+  "short_name": "AutoMakeGrup",
+  "description": "Multi-Account Parallel Telegram Group Creator & Chat History Cleaner (Claymorphism)",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#e8eef9",
+  "theme_color": "#4f6ef7",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

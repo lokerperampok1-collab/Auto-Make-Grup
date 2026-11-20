@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#4f6ef7" />
+  <title>Telegram Auto-Make-Grup Dashboard (Claymorphism)</title>
+  <link rel="manifest" href="/static/manifest.json" />
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <!-- Top Header -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="brand-icon">TG</div>
+      <div>
+        <h1>Auto-Make-Grup Dashboard</h1>
+        <p class="subtitle">Multi-Account Parallel Group Creator &amp; History Cleaner &bull; Anti-FloodWait &bull; Localhost:5555</p>
+      </div>
+    </div>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button id="tabBtnCreate" class="nav-tab active" data-tab="tabCreateGroup">
+        🛠️ Buat Grup Paralel
+      </button>
+      <button id="tabBtnClearHistory" class="nav-tab" data-tab="tabClearHistory">
+        🧹 Hapus Riwayat Chat Grup <span id="tabGroupsCountBadge" class="tab-badge">0</span>
+      </button>
+    </nav>
+
+    <div class="topbar-status">
+      <div id="wsStatusBadge" class="badge badge-connecting">
+        <span class="dot"></span>
+        <span id="wsStatusText">Menghubungkan...</span>
+      </div>
+      <div id="taskGlobalBadge" class="badge badge-idle">IDLE</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- ==================== TAB 1: BUAT GRUP PARALEL ==================== -->
+    <div id="tabCreateGroup" class="tab-pane">
+      <!-- Top Grid: Multi-Account Manager & Multi-Photo Upload -->
+      <div class="grid-2col">
+        <!-- Card 1: Multi-Account Login & Management -->
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <h2>1. Multi-Akun Telegram (Pembuat Grup)</h2>
+              <p class="card-desc">Login banyak akun via QR Code atau Nomor HP untuk dijalankan secara paralel</p>
+            </div>
+            <div class="btn-group">
+              <button id="btnOpenQrModal" class="btn btn-primary">
+                <span>+ Login QR Code</span>
+              </button>
+              <button id="btnOpenPhoneModal" class="btn btn-secondary">
+                <span>+ Nomor HP</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="account-toolbar">
+            <label class="checkbox-label">
+              <input type="checkbox" id="chkSelectAllAccounts" checked />
+              <span>Pilih Semua Akun (<span id="selectedAccountCount">0</span>/<span id="totalAccountCount">0</span>)</span>
+            </label>
+            <button id="btnRefreshAccounts" class="btn btn-sm btn-ghost">Muat Ulang</button>
+          </div>
+
+          <div id="accountsList" class="accounts-list">
+            <div class="empty-state">Belum ada akun yang login. Klik <b>+ Login QR Code</b> untuk menambahkan akun.</div>
+          </div>
+        </section>
+
+        <!-- Card 2: Multi-Photo Upload & Random Picker -->
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <h2>2. Galeri Foto Grup (Acak)</h2>
+              <p class="card-desc">Upload banyak foto sekaligus &mdash; sistem memilih 1 foto secara acak untuk tiap grup</p>
+            </div>
+            <div class="btn-group">
+              <label class="btn btn-primary" for="photoUploadInput">
+                <span>+ Upload Foto</span>
+              </label>
+              <input type="file" id="photoUploadInput" multiple accept=".jpg,.jpeg,.png,.webp" hidden />
+              <button id="btnClearPhotos" class="btn btn-danger-outline btn-sm">Hapus Semua</button>
+            </div>
+          </div>
+
+          <div class="photo-options-bar">
+            <label class="switch-row">
+              <input type="checkbox" id="chkUseRandomPhoto" checked />
+              <span>Aktifkan pemilihan foto grup secara acak (<b id="photoTotalCount">0</b> foto tersedia)</span>
+            </label>
+          </div>
+
+          <div id="photoDropZone" class="photo-dropzone">
+            <p>Tarik &amp; lepas banyak file foto ke sini, atau klik tombol <b>+ Upload Foto</b> di atas</p>
+          </div>
+
+          <div id="photosGrid" class="photos-grid"></div>
+        </section>
+      </div>
+
+      <!-- Middle Card: Group Creation Configuration -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2>3. Konfigurasi Pembuatan Grup Paralel</h2>
+            <p class="card-desc">Atur tipe grup, visibilitas, perizinan, penamaan, @joinhiderrobot, dan auto-admin kontak mutual</p>
+          </div>
+        </div>
+
+        <div class="config-grid">
+          <!-- Column A: Tipe Grup, Visibilitas & Perizinan -->
+          <div class="config-box">
+            <h3>Tipe Grup, Visibilitas &amp; Perizinan</h3>
+
+            <div class="form-group">
+              <label class="form-label">Pilihan Tipe Grup</label>
+              <div class="radio-cards" id="groupTypeRadios">
+                <label class="radio-card active">
+                  <input type="radio" name="group_type" value="megagroup" checked />
+                  <div class="radio-card-body">
+                    <strong>Supergroup / Megagroup</strong>
+                    <span>Mendukung pengaturan visibilitas riwayat chat &amp; hak admin spesifik</span>
+                  </div>
+                </label>
+                <label class="radio-card">
+                  <input type="radio" name="group_type" value="basic" />
+                  <div class="radio-card-body">
+                    <strong>Basic Group (Grup Biasa)</strong>
+                    <span>Grup reguler standar Telegram</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group" id="visibilityGroupWrap">
+              <label class="form-label">Visibilitas Riwayat Chat (Khusus Supergroup / Megagroup)</label>
+              <div class="segmented-control">
+                <label class="segment active">
+                  <input type="radio" name="visibility" value="visible" checked />
+                  <span>👁️ Terlihat (Visible)</span>
+                </label>
+                <label class="segment">
+                  <input type="radio" name="visibility" value="hidden" />
+                  <span>🙈 Tersembunyi (Hidden)</span>
+                </label>
+              </div>
+              <small class="form-hint">Menentukan apakah anggota baru dapat melihat pesan lama sebelum mereka bergabung.</small>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Perizinan Anggota Grup</label>
+              <div class="radio-cards" id="permissionRadios">
+                <label class="radio-card active">
+                  <input type="radio" name="permission_mode" value="all" checked />
+                  <div class="radio-card-body">
+                    <strong>🔓 Semua Perizinan</strong>
+                    <span>Anggota dapat mengirim pesan, media, stiker, tautan, polling, dan menambah anggota</span>
+                  </div>
+                </label>
+                <label class="radio-card">
+                  <input type="radio" name="permission_mode" value="invite_only" />
+                  <div class="radio-card-body">
+                    <strong>👥 Hanya Tambah Anggota</strong>
+                    <span>Anggota HANYA bisa menambah anggota; kirim pesan, media, stiker &amp; lainnya dikunci</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Deskripsi / Bio Grup (Opsional)</label>
+              <input type="text" id="inpGroupAbout" class="form-input" placeholder="Kosongkan jika tidak perlu deskripsi..." />
+            </div>
+          </div>
+
+          <!-- Column B: Sistem Penamaan Grup -->
+          <div class="config-box">
+            <h3>Pengaturan Nama Grup</h3>
+
+            <div class="form-group">
+              <label class="form-label">Mode Penamaan</label>
+              <div class="segmented-control" id="namingModeControl">
+                <label class="segment active">
+                  <input type="radio" name="naming_mode" value="sequence" checked />
+                  <span>🔢 Nomor Urutan (| 1, | 2)</span>
+                </label>
+                <label class="segment">
+                  <input type="radio" name="naming_mode" value="single" />
+                  <span>1️⃣ 1 Nama Semua</span>
+                </label>
+                <label class="segment">
+                  <input type="radio" name="naming_mode" value="random" />
+                  <span>🎲 Beberapa Nama Acak</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Input Nama Dasar (untuk mode sequence & single) -->
+            <div class="form-group" id="baseNameWrap">
+              <label class="form-label">Nama Grup</label>
+              <input type="text" id="inpBaseName" class="form-input" value="Komunitas VIP" placeholder="Masukkan nama grup..." />
+            </div>
+
+            <!-- Input Daftar Nama Acak (untuk mode random) -->
+            <div class="form-group hidden" id="randomNamesWrap">
+              <label class="form-label">Daftar Nama Grup (1 Nama per Baris &mdash; Dipilih Acak oleh Sistem)</label>
+              <textarea id="inpRandomNames" class="form-textarea" rows="5" placeholder="Grup Diskusi Alpha&#10;Grup Diskusi Beta&#10;Komunitas Nusantara&#10;Ruang Obrolan Santai">Grup Diskusi Alpha
+Grup Diskusi Beta
+Komunitas Nusantara
+Ruang Obrolan Santai</textarea>
+              <label class="checkbox-label mt-8">
+                <input type="checkbox" id="chkRandomWithSequence" />
+                <span>Tambahkan juga nomor urutan di belakang nama acak (contoh: <code>Nama Acak | 1</code>)</span>
+              </label>
+            </div>
+
+            <!-- Pengaturan Nomor Urutan -->
+            <div id="sequenceOptionsWrap" class="sub-panel">
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label class="form-label">Mulai dari Nomor</label>
+                  <input type="number" id="inpSeqStart" class="form-input" value="1" min="1" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Format Pemisah</label>
+                  <input type="text" id="inpSeqSeparator" class="form-input" value=" | " />
+                </div>
+              </div>
+              <div class="form-group mb-0">
+                <label class="form-label">Mode Urutan Paralel</label>
+                <select id="selSeqScope" class="form-select">
+                  <option value="global" selected>Urutan Global (Lanjut terus lintas semua akun: | 1, | 2, | 3...)</option>
+                  <option value="per_account">Urutan Per Akun (Masing-masing akun mulai dari nomor awal)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Live Preview Nama Grup -->
+            <div class="name-preview-box">
+              <span class="preview-title">Preview Nama Grup yang Akan Dibuat:</span>
+              <div id="namePreviewTags" class="preview-tags"></div>
+            </div>
+          </div>
+
+          <!-- Column C: @joinhiderrobot, Kontak Mutual & Target Paralel -->
+          <div class="config-box">
+            <h3>Auto-Admin Bot, Kontak Mutual &amp; Eksekusi</h3>
+
+            <!-- @joinhiderrobot Card -->
+            <div class="feature-panel">
+              <label class="switch-row">
+                <input type="checkbox" id="chkInviteJoinHider" checked />
+                <div>
+                  <strong>Otomatis Undang <code>@joinhiderrobot</code> sebagai Admin</strong>
+                  <p class="small-muted">Perizinan khusus hapus pesan join/leave &amp; izin yang diperlukan Join Hider</p>
+                </div>
+              </label>
+
+              <div id="joinHiderConfigWrap" class="feature-panel-body">
+                <div class="form-group">
+                  <label class="form-label">Username Bot Join Hider</label>
+                  <input type="text" id="inpJoinHiderUsername" class="form-input" value="@joinhiderrobot" />
+                </div>
+                <div class="form-group mb-0">
+                  <label class="form-label">Perizinan Admin untuk <code>@joinhiderrobot</code>:</label>
+                  <div class="perm-checkbox-grid">
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="chkJhDeleteMsg" checked />
+                      <span>Hapus Chat / Pesan (Wajib)</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="chkJhOther" checked />
+                      <span>Kelola Chat / Baca Event Join</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="chkJhBanUsers" />
+                      <span>Blokir Pengguna (Opsional)</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="chkJhInviteUsers" />
+                      <span>Tambah Anggota (Opsional)</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="chkJhPinMsg" />
+                      <span>Sematkan Pesan (Opsional)</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mutual Contacts Auto-Invite & Full Admin -->
+            <div class="feature-panel mt-12">
+              <label class="switch-row">
+                <input type="checkbox" id="chkInviteMutuals" checked />
+                <div>
+                  <strong>Otomatis Undang Kontak Mutual &amp; Jadikan Admin</strong>
+                  <p class="small-muted">Saat grup dibuat, semua kontak mutual diundang &amp; langsung dijadikan Admin</p>
+                </div>
+              </label>
+
+              <div id="mutualConfigWrap" class="feature-panel-body">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="chkPromoteMutualAdmin" checked />
+                  <span>Langsung jadikan Admin dengan <b>SEMUA Perizinan KECUALI Tetap Anonim</b></span>
+                </label>
+                <div class="mutual-rights-pills">
+                  <span class="pill pill-on">✓ Ubah Info Grup</span>
+                  <span class="pill pill-on">✓ Hapus Pesan</span>
+                  <span class="pill pill-on">✓ Blokir Pengguna</span>
+                  <span class="pill pill-on">✓ Undang Pengguna</span>
+                  <span class="pill pill-on">✓ Sematkan Pesan</span>
+                  <span class="pill pill-on">✓ Kelola Obrolan Suara</span>
+                  <span class="pill pill-on">✓ Tambah Admin Baru</span>
+                  <span class="pill pill-off">✗ Tetap Anonim (OFF)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Target & FloodWait Info -->
+            <div class="form-row-2 mt-12">
+              <div class="form-group">
+                <label class="form-label">Jumlah Grup / Akun</label>
+                <input type="number" id="inpGroupsPerAccount" class="form-input" value="3" min="1" max="500" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Jeda Antar Grup (Detik)</label>
+                <input type="number" id="inpDelaySeconds" class="form-input" value="3" min="0" step="0.5" />
+              </div>
+            </div>
+
+            <div class="floodwait-banner">
+              <span>🛡️ <b>Auto-Retry FloodWait Aktif:</b> Jika akun terkena limit FloodWait dari Telegram, worker akun tersebut otomatis menunggu sesuai durasi FloodWait dan retry terus hingga berhasil.</span>
+            </div>
+
+            <div class="action-buttons mt-12">
+              <button id="btnStartCreation" class="btn btn-launch">
+                <span>🚀 Mulai Buat Grup Secara Paralel</span>
+              </button>
+              <button id="btnStopCreation" class="btn btn-stop hidden">
+                <span>🛑 Hentikan Proses</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ==================== TAB 2: HAPUS SEMUA RIWAYAT CHAT GRUP (UNTUK SEMUA MEMBER) ==================== -->
+    <div id="tabClearHistory" class="tab-pane hidden">
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2>🧹 Hapus Semua Riwayat Chat Grup (Untuk Semua Member)</h2>
+            <p class="card-desc">
+              Menghapus seluruh pesan (teks, media, foto, maupun notifikasi sistem) di dalam grup <b>untuk semua anggota (for everyone)</b> menggunakan <b>akun pembuat grup</b> masing-masing secara paralel.
+            </p>
+          </div>
+          <div class="btn-group">
+            <button id="btnSyncCreatorGroups" class="btn btn-secondary">
+              <span>🔄 Sinkronisasi Grup dari Akun Pembuat</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Toolbar Filter & Aksi Massal Hapus Riwayat -->
+        <div class="clear-history-toolbar">
+          <div class="toolbar-left">
+            <label class="checkbox-label">
+              <input type="checkbox" id="chkSelectAllClearGroups" checked />
+              <span>Pilih Semua (<b id="selectedClearGroupCount">0</b>/<b id="totalClearGroupCount">0</b> Grup)</span>
+            </label>
+
+            <select id="selFilterCreatorAccount" class="form-select select-inline">
+              <option value="ALL">Semua Akun Pembuat Grup</option>
+            </select>
+
+            <input type="text" id="inpSearchClearGroup" class="form-input input-inline" placeholder="Cari nama grup..." />
+          </div>
+
+          <div class="toolbar-right">
+            <div class="inline-delay">
+              <span>Jeda (detik):</span>
+              <input type="number" id="inpClearDelaySeconds" class="form-input input-xs" value="1" min="0" step="0.5" />
+            </div>
+            <button id="btnStartClearHistory" class="btn btn-danger-solid">
+              <span>🗑️ Hapus Semua Riwayat Chat pada Grup Terpilih (Untuk Semua Member)</span>
+            </button>
+            <button id="btnStopClearHistory" class="btn btn-stop-inline hidden">
+              <span>🛑 Hentikan Hapus Riwayat</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Monitor Progres Worker Hapus Riwayat Per Akun Pembuat -->
+        <div id="clearWorkersWrap" class="clear-workers-section hidden">
+          <h3 class="section-subhead">Progres Hapus Riwayat Paralel (Per Akun Pembuat Grup)</h3>
+          <div id="clearWorkersProgressList" class="workers-list"></div>
+        </div>
+
+        <!-- Tabel Daftar Grup Milik Akun Pembuat -->
+        <div class="table-wrap table-wrap-lg">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 42px;">Pilih</th>
+                <th>Nama Grup</th>
+                <th>ID Grup</th>
+                <th>Tipe Grup</th>
+                <th>Akun Pembuat Grup</th>
+                <th>Waktu Dibuat</th>
+                <th>Terakhir Riwayat Dibersihkan</th>
+                <th style="width: 210px;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="clearGroupsTbody">
+              <tr>
+                <td colspan="8" class="text-center muted">
+                  Belum ada daftar grup. Buat grup di tab <b>Buat Grup Paralel</b> atau klik tombol <b>🔄 Sinkronisasi Grup dari Akun Pembuat</b> di kanan atas.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- ==================== SHARED BOTTOM SECTION: MONITOR & LIVE TERMINAL LOG ==================== -->
+    <div class="grid-2col">
+      <!-- Parallel Workers Status & Created Groups -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2>Monitor Worker Pembuatan Grup &amp; Hasil</h2>
+            <p class="card-desc">Status real-time tiap akun dan hitung mundur FloodWait</p>
+          </div>
+          <span class="badge badge-count">Total Grup Tersimpan: <b id="totalCreatedCount">0</b></span>
+        </div>
+
+        <div id="workersProgressList" class="workers-list">
+          <div class="empty-state">Belum ada proses pembuatan grup berjalan.</div>
+        </div>
+
+        <h3 class="section-subhead">Riwayat Grup Terbaru</h3>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Waktu</th>
+                <th>Nama Grup</th>
+                <th>Tipe &amp; Visibilitas</th>
+                <th>Perizinan</th>
+                <th>Foto</th>
+                <th>Admin Mutual</th>
+                <th>Akun Pembuat</th>
+              </tr>
+            </thead>
+            <tbody id="createdGroupsTbody">
+              <tr>
+                <td colspan="7" class="text-center muted">Belum ada grup yang dibuat.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Real-Time Logs -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2>Live Log Aktivitas</h2>
+            <p class="card-desc">Log pembuatan grup, hapus riwayat chat semua member, dan retry FloodWait</p>
+          </div>
+          <button id="btnClearLogs" class="btn btn-sm btn-ghost">Bersihkan Log</button>
+        </div>
+
+        <div id="terminalLogBox" class="terminal-box"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- MODAL 1: QR CODE LOGIN -->
+  <div id="qrModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Login Akun Telegram via QR Code</h3>
+        <button id="btnCloseQrModal" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body text-center">
+        <div id="qrScanStep">
+          <div class="qr-frame">
+            <img id="qrCodeImg" src="" alt="QR Code Telegram" class="hidden" />
+            <div id="qrLoadingSpinner" class="spinner-box">Membuat QR Code...</div>
+          </div>
+          <p class="qr-instructions">
+            1. Buka aplikasi <b>Telegram</b> di HP Anda<br/>
+            2. Masuk ke <b>Pengaturan &rarr; Perangkat (Devices) &rarr; Tautkan Perangkat Desktop</b><br/>
+            3. Arahkan kamera ke QR Code di atas
+          </p>
+          <p id="qrStatusMsg" class="status-text">Menunggu scan QR Code...</p>
+        </div>
+
+        <!-- 2FA Password Step if account has Two-Step Verification -->
+        <div id="qr2faStep" class="hidden">
+          <div class="alert-info">
+            🔐 Akun ini mengaktifkan <b>Verifikasi 2 Langkah (2FA)</b>. Masukkan password 2FA Anda:
+          </div>
+          <div class="form-group mt-12">
+            <input type="password" id="inpQr2faPassword" class="form-input" placeholder="Password 2FA Telegram..." />
+          </div>
+          <button id="btnSubmitQr2fa" class="btn btn-primary w-full">Verifikasi Password 2FA</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: PHONE + OTP LOGIN -->
+  <div id="phoneModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Login Akun Telegram via Nomor HP</h3>
+        <button id="btnClosePhoneModal" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="phoneStep1">
+          <div class="form-group">
+            <label class="form-label">Nomor HP (Gunakan Kode Negara, contoh: +628123456789)</label>
+            <input type="text" id="inpPhoneNumber" class="form-input" placeholder="+62812..." />
+          </div>
+          <button id="btnSendPhoneCode" class="btn btn-primary w-full">Kirim Kode OTP</button>
+        </div>
+
+        <div id="phoneStep2" class="hidden">
+          <div class="form-group">
+            <label class="form-label">Kode OTP dari Aplikasi Telegram / SMS</label>
+            <input type="text" id="inpPhoneOtp" class="form-input" placeholder="Contoh: 12345" />
+          </div>
+          <div id="phone2faGroup" class="form-group hidden">
+            <label class="form-label">Password 2FA (Verifikasi 2 Langkah)</label>
+            <input type="password" id="inpPhone2fa" class="form-input" placeholder="Masukkan password 2FA..." />
+          </div>
+          <button id="btnVerifyPhoneOtp" class="btn btn-primary w-full">Verifikasi &amp; Login</button>
+        </div>
+        <p id="phoneModalError" class="error-text mt-8"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: PREVIEW & FILTER KONTAK MUTUAL -->
+  <div id="mutualModal" class="modal-backdrop hidden">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3 id="mutualModalTitle">Daftar Kontak Mutual</h3>
+        <button id="btnCloseMutualModal" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="small-muted mb-12">
+          Kontak mutual yang dicentang di bawah ini akan otomatis diundang saat membuat grup dan langsung dijadikan <b>Admin Penuh (Kecuali Tetap Anonim)</b>.
+        </p>
+        <div id="mutualModalList" class="mutual-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/standalone_mtproto.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
