@@ -22,31 +22,14 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Setup Java JDK 17 (for Android Gradle Build)
+      - name: Setup Java JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Prepare Standalone Claymorphism Web Assets
-        run: python scripts/prepare_apk_www.py
-
-      - name: Install Capacitor & Generate Android Project
-        run: |
-          npm install
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
-          npx cap sync android
-
-      - name: Build Standalone Debug APK
-        working-directory: android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug
+      - name: Build Standalone APK
+        run: bash scripts/ci_build_apk.sh
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
